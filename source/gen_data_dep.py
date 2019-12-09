@@ -262,9 +262,6 @@ def extract_code_ptr_from_code():
             # Go through each operand, check if valid code pointer
             decode_insn(ins_ea)
 
-            if ins_ea != int("8161f", 16):
-                continue
-
             # Check code reference with lea
             if GetMnem(ins_ea) == 'lea':
                 i = 0
