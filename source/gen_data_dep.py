@@ -108,14 +108,7 @@ def init():
         if fn is None:
             continue
         name_addr[name] = (fn.startEA, fn.endEA-fn.startEA, 'code')
-        # Add demangled name
-        demangled_name = Demangle(name, GetLongPrm(INF_SHORT_DN))
-        if demangled_name:
-            demangled_name = demangled_name[:demangled_name.find("(")]
-            name_addr[demangled_name] = (fn.startEA, fn.endEA-fn.startEA, 'code')
-            addr_name[fn.startEA] = (demangled_name, fn.endEA - fn.startEA, 'code')
-        else:
-            addr_name[fn.startEA] = (name, fn.endEA - fn.startEA, 'code')
+        addr_name[fn.startEA] = (name, fn.endEA - fn.startEA, 'code')
 
     for tup in Names():
         name = tup[1]
@@ -130,10 +123,10 @@ def init():
             segm = getseg(addr)
             if segm is not None and segm.perm & SEGPERM_WRITE:
                 name_addr[name] = (addr, size, 'data', 1)
-                addr_name[addr] = (get_demangled_name(name), size, 'data', 1)
+                addr_name[addr] = (name, size, 'data', 1)
             else:
                 name_addr[name] = (addr, size, 'data', 0)
-                addr_name[addr] = (get_demangled_name(name), size, 'data', 0)
+                addr_name[addr] = (name, size, 'data', 0)
 
         else:
             pass
@@ -262,9 +255,6 @@ def extract_code_ptr_from_code():
             # Go through each operand, check if valid code pointer
             decode_insn(ins_ea)
 
-            if ins_ea != int("8161f", 16):
-                continue
-
             # Check code reference with lea
             if GetMnem(ins_ea) == 'lea':
                 i = 0
@@ -390,8 +380,8 @@ def main():
     # Wait for auto-analysis to finish before running script
     idaapi.autoWait()
 
-    if os.path.exists(GetInputFile() + '_data.pkl'):
-        idc.Exit(0)
+    # if os.path.exists(GetInputFile() + '_data.pkl'):
+    #     idc.Exit(0)
 
     print "Initialize databse"
     init()
