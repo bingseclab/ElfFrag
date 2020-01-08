@@ -36,7 +36,7 @@ These steps will produce pickle files to serialize data for distribution between
 
 ## Analyze graphs
 * Link all graphs together and create a list of retained code
-`../source/get_true_bindings.py <program_name>`
+`../source/analyze_graphs.py <program_name>`
 
 ## Remove unused code to generate specialized binary for a program
 `../source/gen_lib_frag.py <bindings_file>`

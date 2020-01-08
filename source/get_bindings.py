@@ -19,9 +19,9 @@ def main(argv):
     bindings = {}
 
     bind_pattern_ver = re.compile(
-        ".*binding\sfile\s(?P<source_lib>[^\s]*).*to\s(?P<lib_name>[^\s]*)\s.*symbol\s`(?P<sym>.*)'\s\[(?P<version>.*)\].*")
+        ".*binding\sfile\s(?P<caller_lib>[^\s]*).*to\s(?P<callee_lib>[^\s]*)\s.*symbol\s`(?P<sym>.*)'\s\[(?P<version>.*)\].*")
     bind_pattern = re.compile(
-        ".*binding\sfile\s(?P<source_lib>[^\s]*).*to\s(?P<lib_name>[^\s]*)\s.*symbol\s`(?P<sym>.*)'")
+        ".*binding\sfile\s(?P<caller_lib>[^\s]*).*to\s(?P<callee_lib>[^\s]*)\s.*symbol\s`(?P<sym>.*)'")
 
     bindings = {}
     app = os.path.basename(sys.argv[1])
@@ -32,9 +32,8 @@ def main(argv):
         print file
         lines = [line.strip('\n') for line in open(file).readlines()]
         for line in lines:
-            # line with symbol version
-            lib_name = ''
-            sym = ''
+            if len(line) == 0:
+                continue
             version = ''
             if line[-1] == ']':
                 m = bind_pattern_ver.match(line)
@@ -45,14 +44,16 @@ def main(argv):
                 m = bind_pattern.match(line)
                 if m is None:
                     continue
-            lib_name = m.group('lib_name')
+            callee_lib = m.group('callee_lib')
             sym = m.group('sym')
-            source_lib = m.group("source_lib")
-            baselib = os.path.basename(lib_name)
-            if 'vdso' in lib_name or '/' not in lib_name:
+            caller_lib = m.group("caller_lib")
+            baselib = os.path.basename(callee_lib)
+            if 'vdso' in callee_lib or '/' not in callee_lib:
                     continue
+            if sym not in bindings:
+                bindings[sym] = set()
+            bindings[sym].add((callee_lib, version, caller_lib))
 
-            bindings[sym] = (lib_name, version, source_lib)
         pickle.dump(bindings, open(app + '_bindings.pkl', 'w'))
 
 if __name__ == '__main__':

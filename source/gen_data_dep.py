@@ -192,9 +192,10 @@ def collect_self_imports(ea):
     if ea in range(text.startEA, text.endEA):
         return ea
     if ea in range(extern.startEA, extern.endEA):
-        return None
+        return ea
     for ref in XrefsFrom(ea):
-        return collect_self_imports(ref.to)
+        if ref.to != ea: 
+            return collect_self_imports(ref.to)
 
 def collect_pointers_from_array(ea):
     ptrs = set()
@@ -203,10 +204,12 @@ def collect_pointers_from_array(ea):
         # Check if ea contains code pointer
         byte_chunk = GetManyBytes(ea, get_pointer_size())
         if byte_chunk is None:
+            ea += get_pointer_size()
             continue
         try:
             addr = struct.unpack("<L", byte_chunk)[0]
         except:
+            ea += get_pointer_size()
             continue
         # Found a function pointer
         if is_fn_ptr(addr):
@@ -254,7 +257,6 @@ def extract_code_ptr_from_code():
         for ins_ea in FuncItems(fn_ea):
             # Go through each operand, check if valid code pointer
             decode_insn(ins_ea)
-
             # Check code reference with lea
             if GetMnem(ins_ea) == 'lea':
                 i = 0
@@ -282,24 +284,24 @@ def extract_code_ptr_from_code():
             for xref in xrefs:
                 ref_addr = xref.to
 
+                # Check processed ref_addr:
+                if ref_addr in ptrs_dict and len(ptrs_dict[ref_addr]) > 0:
+                    if fn_ea not in fn_ptrs:
+                        fn_ptrs[fn_ea] = set()
+                    fn_ptrs[fn_ea] = fn_ptrs[fn_ea].union(ptrs_dict[ref_addr])
+                    continue
+                ptrs_dict[ref_addr] = set()
+
                 if is_imported(ref_addr):
                     addr = collect_self_imports(ref_addr) 
                     if addr:
                         if fn_ea not in fn_ptrs:
                             fn_ptrs[fn_ea] = set()
                         fn_ptrs[fn_ea].add(addr)
+                        ptrs_dict[ref_addr].add(addr)
+
                 if ref_addr not in range(text.startEA, text.endEA):
                     continue
-
-                # Check processed ref_addr:
-                if ref_addr in ptrs_dict:
-                    if fn_ea not in fn_ptrs:
-                        fn_ptrs[fn_ea] = set()
-                    fn_ptrs[fn_ea] = fn_ptrs[fn_ea].union(ptrs_dict[ref_addr])
-                    continue
-
-                ptrs_dict[ref_addr] = set()
-
                 flags = get_flags_novalue(ref_addr)
                 
                 if isStruct(flags):
@@ -364,7 +366,7 @@ def dump_result():
     global addr_name
     global fn_chunk
 
-    outfile_name = GetInputFile().lower() + '_data.pkl'
+    outfile_name = GetInputFile() + '_data.pkl'
     print 'Writing output to ' + outfile_name
 
     outfile = open(outfile_name, 'wb')
@@ -379,9 +381,6 @@ def dump_result():
 def main():
     # Wait for auto-analysis to finish before running script
     idaapi.autoWait()
-
-    # if os.path.exists(GetInputFile() + '_data.pkl'):
-    #     idc.Exit(0)
 
     print "Initialize databse"
     init()
